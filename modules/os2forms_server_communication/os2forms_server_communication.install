@@ -1,0 +1,70 @@
+<?php
+
+/**
+ /
+
+/**
+ * Creates a table in the database that will controll the workflow of the module.
+ *
+ * @return created schema
+ */
+function os2forms_server_communication_schema() {
+    $schema['os2forms_server_communication_servers_list'] = array (
+    'description' => 'Table that contains frontend servers list.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique server ID.',
+      ),
+      'server_name' => array(
+         'type' => 'varchar',
+         'length' => 255,
+         'serialize' => FALSE,
+        'description' => 'The frontend server name',
+      ),
+      'url' => array(
+         'description' => 'Url to server',
+         'type' => 'varchar',
+         'length' => 255,
+         'serialize' => FALSE,
+     ),
+      
+      'username' => array(
+        'type' => 'varchar',
+         'length' => 60,
+         'serialize' => FALSE,
+        'description' => 'Username',
+      ),
+     
+     'psw' => array(
+         'type' => 'blob',
+         'length' => 1024,
+         'serialize' => TRUE,
+       'description' => 'Password',
+     ),   
+    ),
+    'primary key' => array('id'),
+  );
+  $schema['os2forms_server_communication_submission_update'] = array(
+    'description' => 'OS2Forms submissions update log',
+    'fields' => array(
+      'frontend_server_id' => array(
+        'description' => 'Frontend server ID',
+        'type' => 'int',        
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'updated' => array(
+        'description' => 'Timestamp of manifest file as a Unix timestamp.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        ),
+    ),
+    'primary key' => array('frontend_server_id'),
+  );
+    return $schema;
+}
+
+/*

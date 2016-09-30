@@ -1,0 +1,415 @@
+<?php
+
+/**
+ * OS2FROMS Server Communication
+ *
+ * PHP version 5
+ *
+ * @category OS2FROM
+ * @package  OS2FROM
+ * @file     Code for OS2FROMS Server Communication
+ * @author   Juulia Devadze <juulia@bellcom.ee>
+ * @license  http://www.gnu.org/licenses/gpl-2.0.html GNU General Public License, version 2
+ * @link     http://bellcom.dk
+
+
+ */
+define('WEBFORM_TITLE', 'tro og love erklaering');
+
+/**
+ * Implementation of hook_menu()
+ *
+ * @return list of links
+ */
+function os2forms_server_communication_menu() {
+  $items = array();
+  $items['admin/config/os2forms_server_communication'] = array(
+    'title' => 'OS2Forms server communication setup',
+    'description' => 'Set up OS2Form Frontend servires',
+    'position' => 'right',
+    'weight' => -15,
+    'access arguments' => array('administer users'),
+    'page callback' => 'system_admin_menu_block_page',
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/config/os2forms_server_communication/settings'] = array(
+    'title' => 'OS2Forms server communication configuration',
+    'description' => 'Set up OS2FROM frontend servers',
+    'access arguments' => array('access administration pages'),
+    'page callback' => 'os2forms_server_communication_settings_page',
+    'file' => 'os2forms_server_communication.admin.inc'
+  );
+  $items['admin/config/os2forms_server_communication/server/add'] = array(
+    'title' => 'New Server',
+    'description' => 'Add new server',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('os2forms_server_communication_add_server_form'),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access administration pages'),
+    'file' => 'os2forms_server_communication.admin.inc'
+  );
+
+  $items['admin/config/os2forms_server_communication/server/%/edit'] = array(
+    'title' => 'Edit Server',
+    'page callback' => 'os2forms_server_communication_edit_server_page',
+    'type' => MENU_CALLBACK,
+    'page arguments' => array(5),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('os2forms_server_communication_edit_server_form'),
+    'access arguments' => array('access administration pages'),
+    'file' => 'os2forms_server_communication.admin.inc'
+  );
+  $items['admin/config/os2forms_server_communication/server/%/delete'] = array(
+    'title' => 'Delete server',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('os2forms_server_communication_delete_server_form'),
+    'access arguments' => array('access administration pages'),
+    'file' => 'os2forms_server_communication.admin.inc',
+  );
+
+  $items['os2forms_server_communication/testcron'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'os2forms_server_communication_sync_submissions',
+    'access arguments' => array('access administration pages'),
+  );
+  $items['admin/config/os2forms_server_communication/submissions/clear'] = array(
+    'title' => 'Delete server',
+    'type' => MENU_CALLBACK,
+    'page arguments' => array('os2forms_server_communication_clear_submissions_form'),
+    'page callback' => 'drupal_get_form',
+    'access arguments' => array('access administration pages'),
+    'file' => 'os2forms_server_communication.admin.inc',
+  );
+  $items['os2forms_server_communication/testpdf'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'os2forms_server_communication_download_pdf',
+    'access arguments' => array('access administration pages'),
+  );
+  return $items;
+}
+
+function os2forms_server_communication_download_pdf() {
+  include_once(libraries_get_path('tcpdf') . '/tcpdf.php');
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  //$template =  _webform2pdf_get_template($nid);
+  $node = node_load(7);
+  $submission = webform_get_submission(7, 20);
+  $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+  $pdf->setPrintHeader(true);
+  $pdf->setPrintFooter(true);
+
+
+  $pdf->SetMargins(25.0, 40, 25.0); // left = 2.5 cm, top = 4 cm, right = 2.5cm
+  $pdf->SetFooterMargin(25);  // the bottom margin has to be set with SetFooterMargin
+
+
+  $pdf->SetAutoPageBreak(TRUE, 30);
+
+  $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO); // we use a default constant to avoid quality lost, PDF_IMAGE_SCALE_RATIO = 1
+
+
+  $pdf->AddPage();
+
+  $output = _os2forms_server_communication_get_submit_receipt_text($node, $submission);
+
+  $pdf->writeHTML($output, true, false, true, false, '');
+  $pdf->lastPage();
+
+// $pdf = theme('webform2pdf_pdf_init', array('node' => $node, 'template' => $template));
+  //if ( !empty($pdf) ) {
+  //  $pdf = theme('webform2pdf_pdf_header', array('pdf' => $pdf, 'node' => $node, 'template' => $template));
+  // $pdf = theme('webform2pdf_pdf_footer', array('pdf' => $pdf, 'node' => $node, 'template' => $template));
+  // $pdf = theme('webform2pdf_pdf_page', array('pdf' => $pdf));    
+  // $page = theme('webform2pdf_content', array('node' => $node, 'submission' => $submission, 'template' => $template));
+  // $page .= _os2forms_backend_app_get_submit_receipt_text( $node, $submission);
+  // $template['pages'] = explode('%pagebreak', $page);
+  // $pdf = theme('webform2pdf_pdf_content', array('pdf' => $pdf, 'node' => $node, 'template' => $template));
+  // reset pointer to the last page
+  // $pdf->lastPage();
+  //filename =drupal_realpath(variable_get('os2forms_server_communication_submission_pdf_dir', 'public://')). '/' . str_replace(" ", "_", WEBFORM_TITLE) . '_submission_' . $submission->serial . '_' . _os2forms_backend_app_get_cpr_number($node, $submission) . '.pdf';
+
+  $pdf->Output('filename.pdf', 'I');
+}
+
+function os2forms_server_communication_cronapi($op, $job = NULL) {
+  switch ($op) {
+    case 'list':
+      return array('os2forms_server_communication_cron' => t("Copied submission from frontend servers"));
+  }
+}
+
+/**
+ * Implementation of hook_cron().
+ * Fires all imports.
+ *
+ * @return none
+ */
+function os2forms_server_communication_cron() {
+
+  os2forms_server_communication_sync_submissions();
+}
+
+function os2forms_server_communication_sync_submissions() {
+  $query = db_select('os2forms_server_communication_servers_list', 's');
+  $query->fields('s', array('id', 'server_name', 'url', 'username', 'psw'));
+  $servers = $query->execute()
+    ->fetchAllAssoc('id');
+
+  $query = db_select('os2forms_server_communication_submission_update', 'i')->fields('i');
+  $results = $query->execute();
+  if ($results) {
+    while ($result = $results->fetchAssoc()) {
+      $updated_submissions[$result['frontend_server_id']] = $result['updated'];
+    }
+  }
+  // GET LOCAL WEBFORM NODE
+
+  $query = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->condition('n.title', WEBFORM_TITLE, '=')
+    ->condition('n.type', 'webform', '=');
+  $local_webform_nid = $query->execute()->fetchField();
+  $cleared_frontend_submission_data['webform_submission'] = _os2forms_server_communication_prepare_frontend_submission($local_webform_nid);
+
+  foreach ($servers as $server) {
+    $options = array(
+      'headers' => array(
+        'Content-Type' => 'application/json',
+        'Authorization' => "Basic " . base64_encode($server->username . ':' . decrypt($server->psw)),),
+      'method' => 'GET',
+    );
+
+    $frontend_webform_nid = _os2forms_server_communication_get_frontend_webform_nid_by_title(WEBFORM_TITLE, $server->url . '/rest/node.json', $options['headers']);
+
+    if ($frontend_webform_nid === FALSE)
+      continue;
+    $result = drupal_http_request($server->url . '/rest/webform_submission.json?parameters[nid]=' . $frontend_webform_nid, $options);
+    $result = json_decode($result->data);
+    foreach ($result as $submission) {
+      if (isset($updated_submissions[$server->id]) && $updated_submissions[$server->id] >= $submission->submitted)
+        continue;
+      $url = $server->url . '/rest/webform_submission/' . $submission->nid . '/' . $submission->sid . '.json';
+      $new_submission = drupal_http_request($url, $options);
+      if ($new_submission->code != 200) {
+        watchdog('OS2forms', 'Request %uri was failed with message: %message', array('%uri' => $url, '%message' => $result->status_message), WATCHDOG_WARNING);
+        continue;
+      }
+      $submission_id = os2forms_server_communication_add_backend_submission($local_webform_nid, json_decode($new_submission->data));
+
+      $cleared_frontend_submission_data["webform_submission"]['submission_id'] = $submission_id;
+
+      //Update frontend submissions 
+      os2forms_server_communication_update_frontend_submission($url, $options['headers'], $cleared_frontend_submission_data);
+    }
+    if (isset($updated_submissions[$server->id])) {
+      db_update('os2forms_server_communication_submission_update')
+        ->fields(array(
+          'updated' => time(),
+        ))
+        ->condition('frontend_server_id', $server->id, '=')
+        ->execute();
+    } else {
+      db_insert('os2forms_server_communication_submission_update')
+        ->fields(array(
+          'frontend_server_id' => $server->id,
+          'updated' => time(),
+        ))
+        ->execute();
+    }
+  }
+}
+
+function os2forms_server_communication_add_backend_submission($nid, $data) {
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  $submission_id = md5(uniqid(rand(), true));
+  $cid = (string) _os2forms_server_communication_get_cid_by_form_key($nid, "submission_id");
+  $subm_data = (array) $data->data;
+  foreach ($subm_data as $key => $value) {
+    $pre_data[$key] = $value;
+  }
+  if (isset($pre_data[$cid]))
+    $pre_data[$cid][0] = $submission_id;
+  else
+    $pre_data[$cid] = array(0 => $submission_id);
+
+  $submission_data = (object) $pre_data;
+
+  global $user;
+
+  $node = node_load($nid);
+  $submission = (object) array(
+      'nid' => $data->nid,
+      'uid' => $user->uid,
+      'submitted' => $data->submitted,
+      'remote_addr' => $data->remote_addr,
+      'is_draft' => FALSE,
+      'data' => $submission_data,
+  );
+  $sid = webform_submission_insert($node, $submission);
+  _os2forms_server_communication_save_submission_pdf($nid, $sid);
+  return $submission_id;
+}
+
+function os2forms_server_communication_update_frontend_submission($url, $headers, $data) {
+  $options = Array(
+    'headers' => $headers,
+    'method' => "PUT",
+    'data' => json_encode($data)
+  );
+
+  $result = drupal_http_request($url, $options);
+
+  if ($result->code != 200)
+    watchdog('OS2forms', 'Request %uri was failed with message: %message', array('%uri' => $url, '%message' => $result->status_message), WATCHDOG_WARNING);
+}
+
+function _os2forms_server_communication_prepare_frontend_submission($nid) {
+  $node = node_load($nid);
+  $data = array();
+  foreach ($node->webform['components'] as $key => $component) {
+    if ($component['type'] == "textfield")
+      $data[$component["form_key"]] = "";
+    else if ($component['type'] == "select")
+      $data[$component["form_key"]] = NULL;
+    else if ($component['type'] == "date")
+      $data[$component["form_key"]] = NULL;
+  }
+
+  return $data;
+}
+
+function _os2forms_server_communication_get_frontend_webform_nid_by_title($title, $url, $headers) {
+  $options = Array(
+    'headers' => $headers,
+    'method' => "GET",
+  );
+  $result = drupal_http_request($url . '?parameters[type]=webform&ampparameters[title]=' . $title, $options);
+  if ($result->code == 200) {
+    $result = (json_decode($result->data));
+    return $result[0]->nid;
+  } else {
+    watchdog('OS2forms', 'Request %uri was failed with message: %message', array('%uri' => $url, '%message' => $result->status_message), WATCHDOG_WARNING);
+    return FALSE;
+  }
+}
+
+function _os2forms_server_communication_get_cid_by_form_key($nid, $form_key) {
+  $query = db_select('webform_component', 'w')
+    ->fields('w', array('cid'))
+    ->condition('w.nid', $nid, '=')
+    ->condition('w.form_key', $form_key, '=');
+  return $query->execute()->fetchField();
+}
+
+function _os2forms_server_communication_save_submission_pdf($nid, $sid) {
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  //module_load_include('inc', 'webform2pdf', 'includes/webform2pdf.theme');
+  include_once(libraries_get_path('tcpdf') . '/tcpdf.php');
+  //$template =  _webform2pdf_get_template($nid);
+  $node = node_load($nid);
+  $submission = webform_get_submission($nid, $sid);
+  $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+  $pdf->setPrintHeader(true);
+  $pdf->setPrintFooter(true);
+
+
+  $pdf->SetMargins(25.0, 40, 25.0); // left = 2.5 cm, top = 4 cm, right = 2.5cm
+  $pdf->SetFooterMargin(25);  // the bottom margin has to be set with SetFooterMargin
+
+
+  $pdf->SetAutoPageBreak(TRUE, 30);
+
+  $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO); // we use a default constant to avoid quality lost, PDF_IMAGE_SCALE_RATIO = 1
+
+
+  $pdf->AddPage();
+
+  $output = _os2forms_server_communication_get_submit_receipt_text($node, $submission);
+  $pdf->writeHTML($output, true, false, true, false, '');
+  $pdf->lastPage();
+
+
+  $filename = drupal_realpath(variable_get('os2forms_server_communication_submission_pdf_dir', 'public://')) . '/' . str_replace(" ", "_", WEBFORM_TITLE) . '_submission_' . $submission->serial . '_' . _os2forms_server_communication_get_cpr_number($node, $submission) . '.pdf';
+  $pdf->Output($filename, 'F');
+}
+
+function os2forms_server_communication_delete_frontend_submission($url, $headers) {
+  $options = Array(
+    'headers' => $headers,
+    'method' => "DELETE",
+  );
+
+  $result = drupal_http_request($url, $options);
+
+  if ($result->code != 200)
+    watchdog('OS2forms', 'Request %uri was failed with message: %message', array('%uri' => $url, '%message' => $result->status_message), WATCHDOG_WARNING);
+}
+
+function _os2forms_server_communication_get_submit_receipt_text($node, $submission) {
+  foreach ($node->webform['components'] as $key => $value) {
+    if ($value['type'] == 'markup')
+      $submission_data[$value['form_key']]['value'] = check_markup($value['value'], 'full_html');
+    else
+      $submission_data[$value['form_key']]['value'] = $submission->data[$key][0];
+    $submission_data[$value['form_key']]['label'] = $value['name'];
+  }
+
+  $output = "";
+  foreach ($submission_data as $key => $value) {
+
+    if ($key == "user_info")
+      $output .= $value['value'];
+    elseif ($key == "not_single_parent")
+      if ($value['value'] == 1)
+        $output .= '<p> Jeg er enlig forsørger </p>';
+      else
+        $output .= '<p> Jeg er ikke længere enlig forsørger fra dato: ';
+    elseif ($key == "date" && $submission_data["not_single_parent"]['value'] == 2)
+      $output .= $value['value'] . '</p>';
+    else
+    if ($value['value'] != "")
+      $output .= '<p>' . $value['label'] . ': ' . $value['value'] . '</p>';
+  }
+
+
+  $output .= '<strong>Receipt text</strong>';
+  $output .= '<p>' . $submission_data['navn']['value'] . '<br/>'
+    . $submission_data['address']['value'] . '<br/>'
+    . $submission_data['postnr']['value'] . '&nbsp;' . $submission_data['city']['value'] . '<br/>'
+    . 'CPR: ' . $submission_data['cpr_number']['value'] . '</p>';
+  if ($submission_data["not_single_parent"]['value'] == 1) {
+    $output .= '<p>Tak for din besvarelse. Vi har registreret at du fortsat er enlig forsørger </p>
+                 <p>Du kan printe denne kvittering ved at klikke på print-knappen (der skal være en print-knap)</p>
+                 <p>Du bedes lukke denne side når du har printet den ud (kommentar: der skal desuden være auto "clearing af personlige oplysninger" altså reload af siden efter 10 min uberørt tastatur/mus - hvis det er muligt)<p>';
+  } else {
+    $output .= '<p>Tak for din besvarelse. Vi har registreret at du ikke længere er enlig forsørger. Du vil høre fra os når vi har behandlet dit svar</p>
+                     <p>Du kan printe denne kvittering ved at klikke på print-knappen</p>
+                     <p>Du bedes lukke denne side når du har printet den ud</p>';
+  }
+
+  $output .= '<p>Med venlig hilsen<br/>
+              Kontrolgruppen<br/>
+              Ballerup Kommune<br/>
+              Hold-An Vej 7<br/>
+              2650 Ballerup<br/>';
+  return $output;
+}
+
+function _os2forms_server_communication_get_cpr_number($node, $submission) {
+  foreach ($submission->data as $key => $value) {
+    if ($node->webform['components'][$key]['form_key'] == 'cpr_number')
+      return $value[0];
+  }
+}
+
+function os2forms_server_communication_views_api() {
+  return array(
+    'api' => 3.0,
+    'path' => drupal_get_path('module', 'os2forms_server_communication') . '/views',
+  );
+}
