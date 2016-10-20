@@ -89,7 +89,7 @@ function os2forms_server_communication_menu() {
 //    'page callback' => 'os2forms_server_communication_download_pdf',
 //    'access arguments' => array('access administration pages'),
 //  );
-//  return $items;
+  return $items;
 }
 
 function os2forms_server_communication_cronapi($op, $job = NULL) {
