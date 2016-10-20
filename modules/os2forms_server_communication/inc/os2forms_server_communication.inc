@@ -63,7 +63,7 @@ function os2forms_server_communication_create_submission($nid, $data) {
     $pre_data[$cid] = array(0 => $submission_id);
   }
 
-  $submission_data = (object) $pre_data;
+  $submission_data = $pre_data;
 
   global $user;
 
@@ -87,18 +87,45 @@ function os2forms_server_communication_create_submission($nid, $data) {
 function _os2forms_server_communication_prepare_submission($nid) {
   $node = node_load($nid);
   $data = array();
+
+  $text_like_fields = array('textfield', 'textarea');
+  $nullable_fields = array('select', 'date', 'date_popup');
+  $number_fields = array('number', 'time');
+  $email_fields = array('email');
+  $cpr_fields = array('nemid_cpr');
+
   foreach ($node->webform['components'] as $key => $component) {
-    if ($component['type'] == "textfield") {
-      $data[$component["form_key"]] = "";
+    if (in_array($component['type'], $text_like_fields)) {
+      if (!$component["required"]) {
+        $data[$component["form_key"]] = "";
+      } else {
+        $data[$component["form_key"]] = "[slettet]";
+      }
     }
-    else {
-      if ($component['type'] == "select") {
+    elseif (in_array($component['type'], $nullable_fields)) {
+      if (!$component["required"]) {
         $data[$component["form_key"]] = NULL;
       }
-      else {
-        if ($component['type'] == "date") {
-          $data[$component["form_key"]] = NULL;
-        }
+    }
+    elseif (in_array($component['type'], $number_fields)) {
+      if (!$component["required"]) {
+        $data[$component["form_key"]] = "";
+      } else {
+        $data[$component["form_key"]] = "0";
+      }
+    }
+    elseif (in_array($component['type'], $email_fields)) {
+      if (!$component["required"]) {
+        $data[$component["form_key"]] = "";
+      } else {
+        $data[$component["form_key"]] = "slettet@slettet.dk";
+      }
+    }
+    elseif (in_array($component['type'], $cpr_fields)) {
+      if (!$component["required"]) {
+        $data[$component["form_key"]] = "";
+      } else {
+        $data[$component["form_key"]] = "0000000000";
       }
     }
   }

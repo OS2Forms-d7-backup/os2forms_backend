@@ -197,7 +197,6 @@ function os2forms_server_communication_sync_submissions() {
           watchdog('OS2forms', '[Server: %server] [Form: %title] Submission data cleared, added token', array(
             '%title' => $webform->title,
             '%server' => $server->server_name,
-            '%uri' => $url,
             '%token' => $submission_id
           ), WATCHDOG_DEBUG);
         }
@@ -205,7 +204,6 @@ function os2forms_server_communication_sync_submissions() {
         watchdog('OS2forms', '[Server: %server] [Form: %title] Request %uri failed with message: %message', array(
           '%title' => $webform->title,
           '%server' => $server->server_name,
-          '%uri' => $url,
           '%message' => $e->getMessage()
         ), WATCHDOG_WARNING);
         continue;
@@ -213,7 +211,7 @@ function os2forms_server_communication_sync_submissions() {
     }
 
     //saving submission time
-    if (isset($last_synched)) {
+    if (!empty($last_synched)) {
       db_update('os2forms_server_communication_submission_update')
         ->fields(array(
           'updated' => time(),

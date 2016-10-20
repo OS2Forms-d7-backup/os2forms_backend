@@ -14,7 +14,7 @@ function os2forms_server_communication_remote_get_submissions($webform_title, $s
   );
 
   //getting webform nid
-  $result = drupal_http_request($server->url . '/rest/node.json?parameters[type]=webform&parameters[title]=' . urlencode($webform_title), $options);
+  $result = drupal_http_request($server->url . '/rest/node.json?parameters[type]=webform&parameters[title]="' . urlencode($webform_title) . '"', $options);
   if ($result->code != 200) {
     throw new Exception($result->status_message);
   }
