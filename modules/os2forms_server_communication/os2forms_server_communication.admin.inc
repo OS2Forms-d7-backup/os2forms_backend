@@ -31,7 +31,7 @@ function os2forms_server_communication_settings_page() {
     //. '<li>' . l(t('Clear backend and all frontend server'), '/admin/config/os2forms_server_communication/submissions/clear', array('attributes' => array('name' => 'add_server')))
     . '</li></ul>';
   $output .= theme('table', array('header' => $headers, 'rows' => $rows));
-  return $output . render(drupal_get_form('os2forms_server_communication_submissions_download_settings_form'));
+  return $output;// . render(drupal_get_form('os2forms_server_communication_submissions_download_settings_form'));
 }
 
 /**
