@@ -5,4 +5,4 @@ version = "7.x-1.0"
 package = OS2FORMS
 dependencies[] = uuid
 
-files[] = views/os2forms_server_communication_handler_field_submission_download_pdf_file.inc
+;files[] = views/os2forms_server_communication_handler_field_submission_download_pdf_file.inc

@@ -3,8 +3,3 @@
  * @file
  * Drupal needs this blank file.
  */
-function os2forms_backend_preprocess_page($vars)
-{
-    drupal_add_css(drupal_get_path('module', 'os2forms_backend_app') . "/css/style.css", "module");
-
-}

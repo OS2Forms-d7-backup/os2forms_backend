@@ -3,47 +3,44 @@
 /**
  * Returns the time when the server was last synched
  */
-function os2forms_server_communication_last_synched($server_id)
-{
-    $query = db_select('os2forms_server_communication_submission_update', 'os')
-        ->fields('os', array('updated'))
-        ->condition('os.frontend_server_id', $server_id, '=');
-    $last_updated = $query->execute()->fetchField();
+function os2forms_server_communication_last_synched($server_id) {
+  $query = db_select('os2forms_server_communication_submission_update', 'os')
+    ->fields('os', array('updated'))
+    ->condition('os.frontend_server_id', $server_id, '=');
+  $last_updated = $query->execute()->fetchField();
 
-    return $last_updated;
+  return $last_updated;
 }
 
 /**
  * Returns the list of remote servers with server ID as key
  */
-function os2forms_server_communication_get_servers()
-{
-    $query = db_select('os2forms_server_communication_servers_list', 's');
-    $query->fields('s', array('id', 'server_name', 'url', 'username', 'psw'));
-    $servers = $query->execute()
-        ->fetchAllAssoc('id');
+function os2forms_server_communication_get_servers() {
+  $query = db_select('os2forms_server_communication_servers_list', 's');
+  $query->fields('s', array('id', 'server_name', 'url', 'username', 'psw'));
+  $servers = $query->execute()
+    ->fetchAllAssoc('id');
 
-    return $servers;
+  return $servers;
 }
 
 /**
  * Returns the list of webforms that exist on the server
  */
-function os2forms_server_communication_get_webforms()
-{
-    $query = new EntityFieldQuery();
-    $query->entityCondition('entity_type', 'node')
-        ->entityCondition('bundle', 'webform')
-        ->propertyCondition('status', NODE_PUBLISHED);
+function os2forms_server_communication_get_webforms() {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'webform')
+    ->propertyCondition('status', NODE_PUBLISHED);
 
-    $result = $query->execute();
+  $result = $query->execute();
 
-    if (isset($result['node'])) {
-        $nids = array_keys($result['node']);
-        $items = entity_load('node', $nids);
-    }
+  if (isset($result['node'])) {
+    $nids = array_keys($result['node']);
+    $items = entity_load('node', $nids);
+  }
 
-    return $items;
+  return $items;
 }
 
 /**
@@ -51,66 +48,71 @@ function os2forms_server_communication_get_webforms()
  *
  * @return auto-generated unique submission_id
  */
-function os2forms_server_communication_create_submission($nid, $data)
-{
-    module_load_include('inc', 'webform', 'includes/webform.submissions');
-    $submission_id = md5(uniqid(rand(), true));
-    $cid = (string)_os2forms_server_communication_get_cid_by_form_key($nid, "submission_id");
-    $subm_data = (array)$data->data;
-    foreach ($subm_data as $key => $value) {
-        $pre_data[$key] = $value;
-    }
-    if (isset($pre_data[$cid])) {
-        $pre_data[$cid][0] = $submission_id;
-    } else {
-        $pre_data[$cid] = array(0 => $submission_id);
-    }
+function os2forms_server_communication_create_submission($nid, $data) {
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  $submission_id = md5(uniqid(rand(), TRUE));
+  $cid = (string) _os2forms_server_communication_get_cid_by_form_key($nid, "submission_id");
+  $subm_data = (array) $data->data;
+  foreach ($subm_data as $key => $value) {
+    $pre_data[$key] = $value;
+  }
+  if (isset($pre_data[$cid])) {
+    $pre_data[$cid][0] = $submission_id;
+  }
+  else {
+    $pre_data[$cid] = array(0 => $submission_id);
+  }
 
-    $submission_data = (object)$pre_data;
+  $submission_data = (object) $pre_data;
 
-    global $user;
+  global $user;
 
-    $node = node_load($nid);
-    $submission = (object)array(
-        'nid' => $data->nid,
-        'uid' => $user->uid,
-        'submitted' => $data->submitted,
-        'remote_addr' => $data->remote_addr,
-        'is_draft' => FALSE,
-        'data' => $submission_data,
-    );
-    $sid = webform_submission_insert($node, $submission);
-    //TODO: _os2forms_server_communication_save_submission_pdf($nid, $sid);
-    return $submission_id;
+  $node = node_load($nid);
+  $submission = (object) array(
+    'nid' => $data->nid,
+    'uid' => $user->uid,
+    'submitted' => $data->submitted,
+    'remote_addr' => $data->remote_addr,
+    'is_draft' => FALSE,
+    'data' => $submission_data,
+  );
+  $sid = webform_submission_insert($node, $submission);
+  //TODO: _os2forms_server_communication_save_submission_pdf($nid, $sid);
+  return $submission_id;
 }
 
 /*
  * Prepares the empty submission of a given form
  */
-function _os2forms_server_communication_prepare_submission($nid)
-{
-    $node = node_load($nid);
-    $data = array();
-    foreach ($node->webform['components'] as $key => $component) {
-        if ($component['type'] == "textfield")
-            $data[$component["form_key"]] = "";
-        else if ($component['type'] == "select")
-            $data[$component["form_key"]] = NULL;
-        else if ($component['type'] == "date")
-            $data[$component["form_key"]] = NULL;
+function _os2forms_server_communication_prepare_submission($nid) {
+  $node = node_load($nid);
+  $data = array();
+  foreach ($node->webform['components'] as $key => $component) {
+    if ($component['type'] == "textfield") {
+      $data[$component["form_key"]] = "";
     }
+    else {
+      if ($component['type'] == "select") {
+        $data[$component["form_key"]] = NULL;
+      }
+      else {
+        if ($component['type'] == "date") {
+          $data[$component["form_key"]] = NULL;
+        }
+      }
+    }
+  }
 
-    return $data;
+  return $data;
 }
 
 /**
  * Returns the component id f the element based on form_key
  */
-function _os2forms_server_communication_get_cid_by_form_key($nid, $form_key)
-{
-    $query = db_select('webform_component', 'w')
-        ->fields('w', array('cid'))
-        ->condition('w.nid', $nid, '=')
-        ->condition('w.form_key', $form_key, '=');
-    return $query->execute()->fetchField();
+function _os2forms_server_communication_get_cid_by_form_key($nid, $form_key) {
+  $query = db_select('webform_component', 'w')
+    ->fields('w', array('cid'))
+    ->condition('w.nid', $nid, '=')
+    ->condition('w.form_key', $form_key, '=');
+  return $query->execute()->fetchField();
 }
