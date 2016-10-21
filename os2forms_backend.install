@@ -21,7 +21,7 @@ function os2forms_backend_uninstall() {
 
 }
 
-function os2forms_backend_app_install() {
+function os2forms_backend_install() {
   if (!module_exists('os2forms_server_communication')) {
     module_enable(array('os2forms_server_communication'), TRUE);
   }
