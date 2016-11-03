@@ -88,7 +88,7 @@ function _os2forms_server_communication_prepare_submission($nid) {
   $node = node_load($nid);
   $data = array();
 
-  $text_like_fields = array('textfield', 'textarea');
+  $text_like_fields = array('textfield', 'textarea', 'nemid_address', 'nemid_city', 'nemid_coaddress', 'nemid_name');
   $nullable_fields = array('select', 'date', 'date_popup');
   $number_fields = array('number', 'time');
   $email_fields = array('email');
