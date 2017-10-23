@@ -80,7 +80,36 @@ function os2forms_server_communication_create_submission($nid, $data) {
   //TODO: _os2forms_server_communication_save_submission_pdf($nid, $sid);
   return $submission_id;
 }
+/*
+ * Create tree for webform submissions
+ * 
+ */
+function _os2forms_server_communication_build_component_tree(array &$elements, $key_parent, $key_element_id, $key_data, $parentId = 0) {
+    $branch = array();
 
+    foreach ($elements as $element) {
+        if ($element[$key_parent] == $parentId) {
+            $children = _os2forms_server_communication_build_component_tree($elements, $key_parent, $key_element_id, $key_data, $element[$key_element_id]);
+
+            if ($children) {
+               foreach($children as $key => $value) {
+                  unset($value[$key_parent]);
+                  unset($value[$key_element_id]);
+                   if (array_key_exists($key_data, $value)) {
+                      $value=$value[$key_data];
+                    }
+
+                 $element[$key] = $value;
+               }
+
+
+            }
+            $branch[$element[$key_element_id]] = $element;
+
+        }
+    }
+    return $branch;
+}
 /*
  * Prepares the empty submission of a given form
  */
@@ -93,43 +122,87 @@ function _os2forms_server_communication_prepare_submission($nid) {
   $number_fields = array('number', 'time');
   $email_fields = array('email');
   $cpr_fields = array('nemid_cpr');
+  $group_fields = array('bt_layout_row', 'bt_layout_cols', 'fieldset');
+  $group_fields_ids = array();
+  $parent_elements = array();
+  //bdpm(buildTree($node->webform['components']));
+  foreach ($node->webform['components'] as $key => $component) {
+    if ($component["pid"] == 0 ) {
+      $parent_elements[] = $component["form_key"];
+    }
+    if (in_array($component['type'], $group_fields)) {
+      $group_fields_ids[$key] = $component["form_key"];
+    }
+  }
+  $result= array();
 
   foreach ($node->webform['components'] as $key => $component) {
     if (in_array($component['type'], $text_like_fields)) {
       if (!$component["required"]) {
-        $data[$component["form_key"]] = "";
+        $data[$component["form_key"]]['data'] = "";
       } else {
-        $data[$component["form_key"]] = "[slettet]";
+        $data[$component["form_key"]]['data'] = "[slettet]";
       }
+      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
+    $data[$component["form_key"]]['cid'] =  $component["form_key"];
+    }
+     elseif (in_array($component['type'],  $group_fields)) {
+      $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+      $data[$component["form_key"]]['cid'] =  $component["form_key"];
     }
     elseif (in_array($component['type'], $nullable_fields)) {
       if (!$component["required"]) {
-        $data[$component["form_key"]] = NULL;
+        $data[$component["form_key"]]['data'] = NULL;
+        $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
+        $data[$component["form_key"]]['cid'] =  $component["form_key"];
       }
+
+
     }
     elseif (in_array($component['type'], $number_fields)) {
       if (!$component["required"]) {
-        $data[$component["form_key"]] = "";
+        $data[$component["form_key"]]['data'] = "";
       } else {
-        $data[$component["form_key"]] = "0";
+        $data[$component["form_key"]]['data'] = "0";
       }
+      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
+    $data[$component["form_key"]]['cid'] =  $component["form_key"];
     }
     elseif (in_array($component['type'], $email_fields)) {
       if (!$component["required"]) {
-        $data[$component["form_key"]] = "";
+        $data[$component["form_key"]]['data'] = "";
       } else {
-        $data[$component["form_key"]] = "slettet@slettet.dk";
+        $data[$component["form_key"]]['data'] = "slettet@slettet.dk";
       }
+      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
+    $data[$component["form_key"]]['cid'] =  $component["form_key"];
     }
     elseif (in_array($component['type'], $cpr_fields)) {
       if (!$component["required"]) {
-        $data[$component["form_key"]] = "";
+        $data[$component["form_key"]]['data'] = "";
       } else {
-        $data[$component["form_key"]] = "0000000000";
+        $data[$component["form_key"]]['data'] = "0000000000";
       }
+      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
+      $data[$component["form_key"]]['cid'] =  $component["form_key"];
     }
   }
 
+
+  $data = _os2forms_server_communication_build_component_tree($data, 'parent_id', 'cid', 'data');
+  foreach($data as $key =>$value){
+    if(!in_array($key, $parent_elements)) {
+      unset($data[$key]);
+    }
+    else {
+      unset($data[$key]['cid']);
+      unset($data[$key]['parent_id']);
+      if (array_key_exists('data', $value)) {
+        $data[$key] = $value['data'];
+      }
+    }
+
+  }
   return $data;
 }
 
