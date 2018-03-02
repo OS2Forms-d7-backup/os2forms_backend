@@ -118,7 +118,8 @@ function _os2forms_server_communication_prepare_submission($nid) {
   $data = array();
 
   $text_like_fields = array('textfield', 'textarea', 'nemid_address', 'nemid_city', 'nemid_coaddress', 'nemid_name');
-  $nullable_fields = array('select', 'date', 'date_popup');
+  $nullable_fields = array('select');
+  $date_fields = array('date', 'date_popup');
   $number_fields = array('number', 'time');
   $email_fields = array('email');
   $cpr_fields = array('nemid_cpr');
@@ -153,6 +154,20 @@ function _os2forms_server_communication_prepare_submission($nid) {
     elseif (in_array($component['type'], $nullable_fields)) {
       if (!$component["required"]) {
         $data[$component["form_key"]]['data'] = NULL;
+        $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
+        $data[$component["form_key"]]['cid'] =  $component["form_key"];
+      }
+
+
+    }
+    elseif (in_array($component['type'], $date_fields)) {
+      if (!$component["required"]) {
+        $data[$component["form_key"]]['data'] = NULL;
+        $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
+        $data[$component["form_key"]]['cid'] =  $component["form_key"];
+      }
+      else {
+        $data[$component["form_key"]]['data'] = 0;
         $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
         $data[$component["form_key"]]['cid'] =  $component["form_key"];
       }
