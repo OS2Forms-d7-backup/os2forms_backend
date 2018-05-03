@@ -45,12 +45,11 @@ function os2forms_server_communication_get_webforms() {
 
 /**
  * Copies and creates the actual submission on the backend server
- *
  * @return auto-generated unique submission_id
  */
 function os2forms_server_communication_create_submission($nid, $data) {
   module_load_include('inc', 'webform', 'includes/webform.submissions');
-  $submission_id = md5(uniqid(rand(), TRUE));
+  $submission_id = os2forms_server_communication_generate_submission_id();
   $cid = (string) _os2forms_server_communication_get_cid_by_form_key($nid, "submission_id");
   $subm_data = (array) $data->data;
   foreach ($subm_data as $key => $value) {
@@ -77,39 +76,78 @@ function os2forms_server_communication_create_submission($nid, $data) {
     'data' => $submission_data,
   );
   $sid = webform_submission_insert($node, $submission);
-  //TODO: _os2forms_server_communication_save_submission_pdf($nid, $sid);
+
   return $submission_id;
 }
+
+/**
+ * Schedules a submission for being cleared.
+ *
+ * @param $nid
+ * @param $sid
+ * @param $submission_id
+ */
+function os2forms_server_communication_schedule_submission_clearing($nid, $sid, $submission_id) {
+  db_insert('os2forms_server_communication_submissions_clearing_queue')
+    ->fields(array(
+      'nid' => $nid,
+      'sid' => $sid,
+      'submission_id' => $submission_id,
+      'updated' => time(),
+    ))
+    ->execute();
+}
+
+/**
+ * Clears a submission of a webform, and sets submission_id into a corresponding field.
+ */
+function os2forms_server_communication_clear_submission($nid, $sid, $submission_id) {
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+
+  $submission_cid = (string) _os2forms_server_communication_get_cid_by_form_key($nid, "submission_id");
+
+  $webform_node = node_load($nid);
+
+  $submission = webform_menu_submission_load($sid, $nid);
+
+  foreach($submission->data as $key => $element) {
+    $submission->data[$key][0] = '';
+  }
+
+  // Setting submission_id.
+  $submission->data[$submission_cid][0] = $submission_id;
+
+  webform_submission_update($webform_node, $submission);
+}
+
 /*
  * Create tree for webform submissions
  * 
  */
 function _os2forms_server_communication_build_component_tree(array &$elements, $key_parent, $key_element_id, $key_data, $parentId = 0) {
-    $branch = array();
+  $branch = array();
 
-    foreach ($elements as $element) {
-        if ($element[$key_parent] == $parentId) {
-            $children = _os2forms_server_communication_build_component_tree($elements, $key_parent, $key_element_id, $key_data, $element[$key_element_id]);
+  foreach ($elements as $element) {
+    if ($element[$key_parent] == $parentId) {
+      $children = _os2forms_server_communication_build_component_tree($elements, $key_parent, $key_element_id, $key_data, $element[$key_element_id]);
 
-            if ($children) {
-               foreach($children as $key => $value) {
-                  unset($value[$key_parent]);
-                  unset($value[$key_element_id]);
-                   if (array_key_exists($key_data, $value)) {
-                      $value=$value[$key_data];
-                    }
+      if ($children) {
+        foreach ($children as $key => $value) {
+          unset($value[$key_parent]);
+          unset($value[$key_element_id]);
+          if (array_key_exists($key_data, $value)) {
+            $value = $value[$key_data];
+          }
 
-                 $element[$key] = $value;
-               }
-
-
-            }
-            $branch[$element[$key_element_id]] = $element;
-
+          $element[$key] = $value;
         }
+      }
+      $branch[$element[$key_element_id]] = $element;
     }
-    return $branch;
+  }
+  return $branch;
 }
+
 /*
  * Prepares the empty submission of a given form
  */
@@ -126,87 +164,86 @@ function _os2forms_server_communication_prepare_submission($nid) {
   $group_fields = array('bt_layout_row', 'bt_layout_cols', 'fieldset');
   $group_fields_ids = array();
   $parent_elements = array();
-  //bdpm(buildTree($node->webform['components']));
+
   foreach ($node->webform['components'] as $key => $component) {
-    if ($component["pid"] == 0 ) {
+    if ($component["pid"] == 0) {
       $parent_elements[] = $component["form_key"];
     }
     if (in_array($component['type'], $group_fields)) {
       $group_fields_ids[$key] = $component["form_key"];
     }
   }
-  $result= array();
 
   foreach ($node->webform['components'] as $key => $component) {
     if (in_array($component['type'], $text_like_fields)) {
       if (!$component["required"]) {
         $data[$component["form_key"]]['data'] = "";
-      } else {
+      }
+      else {
         $data[$component["form_key"]]['data'] = "[slettet]";
       }
-      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
-    $data[$component["form_key"]]['cid'] =  $component["form_key"];
-    }
-     elseif (in_array($component['type'],  $group_fields)) {
       $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
-      $data[$component["form_key"]]['cid'] =  $component["form_key"];
+      $data[$component["form_key"]]['cid'] = $component["form_key"];
+    }
+    elseif (in_array($component['type'], $group_fields)) {
+      $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+      $data[$component["form_key"]]['cid'] = $component["form_key"];
     }
     elseif (in_array($component['type'], $nullable_fields)) {
       if (!$component["required"]) {
         $data[$component["form_key"]]['data'] = NULL;
-        $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
-        $data[$component["form_key"]]['cid'] =  $component["form_key"];
+        $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+        $data[$component["form_key"]]['cid'] = $component["form_key"];
       }
-
-
     }
     elseif (in_array($component['type'], $date_fields)) {
       if (!$component["required"]) {
         $data[$component["form_key"]]['data'] = NULL;
-        $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
-        $data[$component["form_key"]]['cid'] =  $component["form_key"];
+        $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+        $data[$component["form_key"]]['cid'] = $component["form_key"];
       }
       else {
         $data[$component["form_key"]]['data'] = 0;
-        $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
-        $data[$component["form_key"]]['cid'] =  $component["form_key"];
+        $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+        $data[$component["form_key"]]['cid'] = $component["form_key"];
       }
-
-
     }
     elseif (in_array($component['type'], $number_fields)) {
       if (!$component["required"]) {
         $data[$component["form_key"]]['data'] = "";
-      } else {
+      }
+      else {
         $data[$component["form_key"]]['data'] = "0";
       }
-      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
-    $data[$component["form_key"]]['cid'] =  $component["form_key"];
+      $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+      $data[$component["form_key"]]['cid'] = $component["form_key"];
     }
     elseif (in_array($component['type'], $email_fields)) {
       if (!$component["required"]) {
         $data[$component["form_key"]]['data'] = "";
-      } else {
+      }
+      else {
         $data[$component["form_key"]]['data'] = "slettet@slettet.dk";
       }
-      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
-    $data[$component["form_key"]]['cid'] =  $component["form_key"];
+      $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+      $data[$component["form_key"]]['cid'] = $component["form_key"];
     }
     elseif (in_array($component['type'], $cpr_fields)) {
       if (!$component["required"]) {
         $data[$component["form_key"]]['data'] = "";
-      } else {
+      }
+      else {
         $data[$component["form_key"]]['data'] = "0000000000";
       }
-      $data[$component["form_key"]]['parent_id'] =  $group_fields_ids[$component["pid"]];
-      $data[$component["form_key"]]['cid'] =  $component["form_key"];
+      $data[$component["form_key"]]['parent_id'] = $group_fields_ids[$component["pid"]];
+      $data[$component["form_key"]]['cid'] = $component["form_key"];
     }
   }
 
-
   $data = _os2forms_server_communication_build_component_tree($data, 'parent_id', 'cid', 'data');
-  foreach($data as $key =>$value){
-    if(!in_array($key, $parent_elements)) {
+
+  foreach ($data as $key => $value) {
+    if (!in_array($key, $parent_elements)) {
       unset($data[$key]);
     }
     else {
@@ -216,13 +253,13 @@ function _os2forms_server_communication_prepare_submission($nid) {
         $data[$key] = $value['data'];
       }
     }
-
   }
+
   return $data;
 }
 
 /**
- * Returns the component id f the element based on form_key
+ * Returns the component id of the element based on form_key
  */
 function _os2forms_server_communication_get_cid_by_form_key($nid, $form_key) {
   $query = db_select('webform_component', 'w')
@@ -230,4 +267,13 @@ function _os2forms_server_communication_get_cid_by_form_key($nid, $form_key) {
     ->condition('w.nid', $nid, '=')
     ->condition('w.form_key', $form_key, '=');
   return $query->execute()->fetchField();
+}
+
+/**
+ * Generated random string used for submission id.
+ *
+ * @return string
+ */
+function os2forms_server_communication_generate_submission_id() {
+  return md5(uniqid(rand(), TRUE));
 }

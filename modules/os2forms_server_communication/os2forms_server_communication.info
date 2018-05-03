@@ -1,8 +1,6 @@
 name = OS2Forms Server Communication
 description = Backend function for form submission
 core = 7.x
-version = "7.x-1.0"
+version = "7.x-1.1"
 package = OS2FORMS
 dependencies[] = uuid
-
-;files[] = views/os2forms_server_communication_handler_field_submission_download_pdf_file.inc

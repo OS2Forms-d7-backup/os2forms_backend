@@ -1,9 +1,9 @@
 <?php
 
 /*
- * Creates a table in the database that will controll the workflow of the module.
+ * Implements hook_schema().
  *
- * @return created schema
+ * Creates a table in the database that will control the workflow of the module.
  */
 function os2forms_server_communication_schema() {
   $schema['os2forms_server_communication_servers_list'] = array(
@@ -41,6 +41,7 @@ function os2forms_server_communication_schema() {
     ),
     'primary key' => array('id'),
   );
+
   $schema['os2forms_server_communication_submission_update'] = array(
     'description' => 'OS2Forms submissions update log',
     'fields' => array(
@@ -59,5 +60,60 @@ function os2forms_server_communication_schema() {
     ),
     'primary key' => array('frontend_server_id'),
   );
+
+  $schema['os2forms_server_communication_submissions_clearing_queue'] = array(
+    'description' => 'OS2Forms submissions clearing queue',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'ID of the webform node',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'sid' => array(
+        'description' => 'ID of the webform submission',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'submission_id' => array(
+          'description' => 'The generated submission id, that is appended to the submission',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+      ),
+      'cleared' =>  array(
+        'description' => 'Indicator of webform being cleard, 0 = not cleared, 1 = cleared',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'updated' => array(
+        'description' => 'Timestamp of entry being updated.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('nid', 'sid'),
+  );
   return $schema;
 }
+
+/**
+ * Adding the os2forms_server_communication_submissions_clearing_queue table.
+ */
+function os2forms_server_communication_update_7101(&$sandbox) {
+  db_create_table('os2forms_server_communication_submissions_clearing_queue', drupal_get_schema_unprocessed('os2forms_server_communication', 'os2forms_server_communication_submissions_clearing_queue'));
+}
+
+/*
+ * Implements hook_uninstall().
+ */
+function os2forms_server_communication_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('os2forms_server_communication');
+}
+
+

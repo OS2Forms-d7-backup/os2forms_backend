@@ -2,9 +2,7 @@
 
 /**
  * OS2Forms Server Communication
- *
  * PHP version 5
- *
  * @category OS2Forms
  * @package  OS2Forms
  * @file     Code for OS2Forms Server Communication
@@ -12,14 +10,11 @@
  * @license  http://www.gnu.org/licenses/gpl-2.0.html GNU General Public License, version 2
  * @link     http://bellcom.dk
  */
-define('WEBFORM_TITLE', 'tro og love erklaering');
-
 module_load_include('inc', 'os2forms_server_communication', 'inc/os2forms_server_communication');
 module_load_include('inc', 'os2forms_server_communication', 'inc/os2forms_server_communication.remote');
 
 /**
  * Implementation of hook_menu()
- *
  * @return list of links
  */
 function os2forms_server_communication_menu() {
@@ -84,11 +79,7 @@ function os2forms_server_communication_menu() {
     'access arguments' => array('access administration pages'),
     'file' => 'os2forms_server_communication.admin.inc',
   );
-//  $items['os2forms_server_communication/testpdf'] = array(
-//    'type' => MENU_CALLBACK,
-//    'page callback' => 'os2forms_server_communication_download_pdf',
-//    'access arguments' => array('access administration pages'),
-//  );
+
   return $items;
 }
 
@@ -102,60 +93,12 @@ function os2forms_server_communication_cronapi($op, $job = NULL) {
 /**
  * Implementation of hook_cron().
  * Fires all imports.
- *
  * @return none
  */
 function os2forms_server_communication_cron() {
   os2forms_server_communication_sync_submissions();
+  os2forms_server_communication_clear_submissions();
 }
-
-function os2forms_server_communication_views_api() {
-  return array(
-    'api' => 3.0,
-    'path' => drupal_get_path('module', 'os2forms_server_communication') . '/views',
-  );
-}
-
-//function os2forms_server_communication_download_pdf() {
-//  include_once(libraries_get_path('tcpdf') . '/tcpdf.php');
-//  module_load_include('inc', 'webform', 'includes/webform.submissions');
-//  //$template =  _webform2pdf_get_template($nid);
-//  $node = node_load(7);
-//  $submission = webform_get_submission(7, 20);
-//  $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, TRUE, 'UTF-8', FALSE);
-//
-//  $pdf->setPrintHeader(TRUE);
-//  $pdf->setPrintFooter(TRUE);
-//
-//  $pdf->SetMargins(25.0, 40, 25.0); // left = 2.5 cm, top = 4 cm, right = 2.5cm
-//  $pdf->SetFooterMargin(25); // the bottom margin has to be set with SetFooterMargin
-//
-//  $pdf->SetAutoPageBreak(TRUE, 30);
-//
-//  $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO); // we use a default constant to avoid quality lost, PDF_IMAGE_SCALE_RATIO = 1
-//
-//  $pdf->AddPage();
-//
-//  $output = _os2forms_server_communication_get_submit_receipt_text($node, $submission);
-//
-//  $pdf->writeHTML($output, TRUE, FALSE, TRUE, FALSE, '');
-//  $pdf->lastPage();
-//
-//// $pdf = theme('webform2pdf_pdf_init', array('node' => $node, 'template' => $template));
-//  //if ( !empty($pdf) ) {
-//  //  $pdf = theme('webform2pdf_pdf_header', array('pdf' => $pdf, 'node' => $node, 'template' => $template));
-//  // $pdf = theme('webform2pdf_pdf_footer', array('pdf' => $pdf, 'node' => $node, 'template' => $template));
-//  // $pdf = theme('webform2pdf_pdf_page', array('pdf' => $pdf));
-//  // $page = theme('webform2pdf_content', array('node' => $node, 'submission' => $submission, 'template' => $template));
-//  // $page .= _os2forms_backend_app_get_submit_receipt_text( $node, $submission);
-//  // $template['pages'] = explode('%pagebreak', $page);
-//  // $pdf = theme('webform2pdf_pdf_content', array('pdf' => $pdf, 'node' => $node, 'template' => $template));
-//  // reset pointer to the last page
-//  // $pdf->lastPage();
-//  //filename =drupal_realpath(variable_get('os2forms_server_communication_submission_pdf_dir', 'public://')). '/' . str_replace(" ", "_", WEBFORM_TITLE) . '_submission_' . $submission->serial . '_' . _os2forms_backend_app_get_cpr_number($node, $submission) . '.pdf';
-//
-//  $pdf->Output('filename.pdf', 'I');
-//}
 
 function os2forms_server_communication_sync_submissions() {
   //synching remote servers
@@ -232,98 +175,27 @@ function os2forms_server_communication_sync_submissions() {
   }
 }
 
-//function _os2forms_server_communication_save_submission_pdf($nid, $sid) {
-//  module_load_include('inc', 'webform', 'includes/webform.submissions');
-//  include_once(libraries_get_path('tcpdf') . '/tcpdf.php');
-//  $node = node_load($nid);
-//  $submission = webform_get_submission($nid, $sid);
-//  $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, TRUE, 'UTF-8', FALSE);
-//
-//  $pdf->setPrintHeader(TRUE);
-//  $pdf->setPrintFooter(TRUE);
-//
-//  $pdf->SetMargins(25.0, 40, 25.0); // left = 2.5 cm, top = 4 cm, right = 2.5cm
-//  $pdf->SetFooterMargin(25); // the bottom margin has to be set with SetFooterMargin
-//
-//  $pdf->SetAutoPageBreak(TRUE, 30);
-//  $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO); // we use a default constant to avoid quality lost, PDF_IMAGE_SCALE_RATIO = 1
-//
-//  $pdf->AddPage();
-//
-//  $output = _os2forms_server_communication_get_submit_receipt_text($node, $submission);
-//  $pdf->writeHTML($output, TRUE, FALSE, TRUE, FALSE, '');
-//  $pdf->lastPage();
-//
-//  $filename = drupal_realpath(variable_get('os2forms_server_communication_submission_pdf_dir', 'public://')) . '/' . str_replace(" ", "_", WEBFORM_TITLE) . '_submission_' . $submission->serial . '_' . _os2forms_server_communication_get_cpr_number($node, $submission) . '.pdf';
-//  $pdf->Output($filename, 'F');
-//}
-//
-//function _os2forms_server_communication_get_submit_receipt_text($node, $submission) {
-//  foreach ($node->webform['components'] as $key => $value) {
-//    if ($value['type'] == 'markup') {
-//      $submission_data[$value['form_key']]['value'] = check_markup($value['value'], 'full_html');
-//    }
-//    else {
-//      $submission_data[$value['form_key']]['value'] = $submission->data[$key][0];
-//    }
-//
-//    $submission_data[$value['form_key']]['label'] = $value['name'];
-//  }
-//
-//  $output = "";
-//  foreach ($submission_data as $key => $value) {
-//
-//    if ($key == "user_info") {
-//      $output .= $value['value'];
-//    }
-//    elseif ($key == "not_single_parent") {
-//      if ($value['value'] == 1) {
-//        $output .= '<p> Jeg er enlig forsørger </p>';
-//      }
-//      else {
-//        $output .= '<p> Jeg er ikke længere enlig forsørger fra dato: ';
-//      }
-//    }
-//    elseif ($key == "date" && $submission_data["not_single_parent"]['value'] == 2) {
-//      $output .= $value['value'] . '</p>';
-//    }
-//    else {
-//      if ($value['value'] != "") {
-//        $output .= '<p>' . $value['label'] . ': ' . $value['value'] . '</p>';
-//      }
-//    }
-//  }
-//
-//
-//  $output .= '<strong>Receipt text</strong>';
-//  $output .= '<p>' . $submission_data['navn']['value'] . '<br/>'
-//    . $submission_data['address']['value'] . '<br/>'
-//    . $submission_data['postnr']['value'] . '&nbsp;' . $submission_data['city']['value'] . '<br/>'
-//    . 'CPR: ' . $submission_data['cpr_number']['value'] . '</p>';
-//  if ($submission_data["not_single_parent"]['value'] == 1) {
-//    $output .= '<p>Tak for din besvarelse. Vi har registreret at du fortsat er enlig forsørger </p>
-//                 <p>Du kan printe denne kvittering ved at klikke på print-knappen (der skal være en print-knap)</p>
-//                 <p>Du bedes lukke denne side når du har printet den ud (kommentar: der skal desuden være auto "clearing af personlige oplysninger" altså reload af siden efter 10 min uberørt tastatur/mus - hvis det er muligt)<p>';
-//  }
-//  else {
-//    $output .= '<p>Tak for din besvarelse. Vi har registreret at du ikke længere er enlig forsørger. Du vil høre fra os når vi har behandlet dit svar</p>
-//                     <p>Du kan printe denne kvittering ved at klikke på print-knappen</p>
-//                     <p>Du bedes lukke denne side når du har printet den ud</p>';
-//  }
-//
-//  $output .= '<p>Med venlig hilsen<br/>
-//              Kontrolgruppen<br/>
-//              Ballerup Kommune<br/>
-//              Hold-An Vej 7<br/>
-//              2650 Ballerup<br/>';
-//  return $output;
-//}
-//
-//function _os2forms_server_communication_get_cpr_number($node, $submission) {
-//  foreach ($submission->data as $key => $value) {
-//    dpm($node->webform);
-//    if ($node->webform['components'][$key]['form_key'] == 'cpr_number') {
-//      return $value[0];
-//    }
-//  }
-//}
+/*
+ * Job to clear all submissions scheduled to be cleared.
+ */
+function os2forms_server_communication_clear_submissions() {
+  // Select submission for clearing.
+  $query = db_select('os2forms_server_communication_submissions_clearing_queue', 'o');
+  $query->fields('o', array('nid', 'sid', 'submission_id'))
+    ->condition('cleared', 0);
+  $result = $query->execute();
+
+  while ($record = $result->fetchAssoc()) {
+    os2forms_server_communication_clear_submission($record['nid'], $record['sid'], $record['submission_id']);
+
+    // Updating database entry.
+    db_update('os2forms_server_communication_submissions_clearing_queue')
+      ->fields(array(
+        'cleared' => 1,
+        'updated' => time(),
+      ))
+      ->condition('nid', $record['nid'])
+      ->condition('sid', $record['sid'])
+      ->execute();
+  }
+}
