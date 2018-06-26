@@ -88,14 +88,22 @@ function os2forms_server_communication_create_submission($nid, $data) {
  * @param $submission_id
  */
 function os2forms_server_communication_schedule_submission_clearing($nid, $sid, $submission_id) {
-  db_insert('os2forms_server_communication_submissions_clearing_queue')
-    ->fields(array(
-      'nid' => $nid,
-      'sid' => $sid,
-      'submission_id' => $submission_id,
-      'updated' => time(),
-    ))
-    ->execute();
+  //check if row already exists in DB
+  $query = db_select('os2forms_server_communication_submissions_clearing_queue', 'q')
+      ->fields('q', array('nid'))
+     ->condition('q.nid', $nid)
+     ->condition('q.sid', $sid);
+     $count = $query->execute()->rowCount();
+  if ($count === 0) {
+    db_insert('os2forms_server_communication_submissions_clearing_queue')
+      ->fields(array(
+        'nid' => $nid,
+        'sid' => $sid,
+        'submission_id' => $submission_id,
+        'updated' => time(),
+      ))
+      ->execute();
+  }
 }
 
 /**
