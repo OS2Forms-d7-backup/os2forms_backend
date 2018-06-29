@@ -130,7 +130,7 @@ function os2forms_server_communication_clear_submission($nid, $sid, $submission_
 
 /*
  * Create tree for webform submissions
- * 
+ *
  */
 function _os2forms_server_communication_build_component_tree(array &$elements, $key_parent, $key_element_id, $key_data, $parentId = 0) {
   $branch = array();
@@ -163,7 +163,20 @@ function _os2forms_server_communication_prepare_submission($nid) {
   $node = node_load($nid);
   $data = array();
 
-  $text_like_fields = array('textfield', 'textarea', 'nemid_address', 'nemid_city', 'nemid_coaddress', 'nemid_name');
+  $text_like_fields = array(
+    'textfield',
+    'textarea',
+    'nemid_address',
+    'nemid_city',
+    'nemid_coaddress',
+    'nemid_name',
+    'nemid_pid',
+    'nemid_com_cvr',
+    'nemid_com_rid',
+    'nemid_com_name',
+    'nemid_com_addr',
+    'nemid_com_city',
+    );
   $nullable_fields = array('select');
   $date_fields = array('date', 'date_popup');
   $number_fields = array('number', 'time');
