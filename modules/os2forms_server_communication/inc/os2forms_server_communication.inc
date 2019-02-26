@@ -176,7 +176,8 @@ function _os2forms_server_communication_prepare_submission($nid) {
     'nemid_com_name',
     'nemid_com_addr',
     'nemid_com_city',
-    );
+    'address_autocomp',
+  );
   $nullable_fields = array('select');
   $date_fields = array('date', 'date_popup');
   $number_fields = array('number', 'time');
