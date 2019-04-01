@@ -1,0 +1,58 @@
+<?php
+
+/*
+ * Implements hook_schema().
+ *
+ * Creates a table in the database that will control the workflow of the module.
+ */
+function os2forms_server_communication_schema() {
+  $schema['os2forms_server_communication_servers_list'] = array(
+    'description' => 'Table that contains frontend servers list.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique server ID.',
+      ),
+      'server_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'serialize' => FALSE,
+        'description' => 'The frontend server name',
+      ),
+      'url' => array(
+        'description' => 'Url to server',
+        'type' => 'varchar',
+        'length' => 255,
+        'serialize' => FALSE,
+      ),
+      'username' => array(
+        'type' => 'varchar',
+        'length' => 60,
+        'serialize' => FALSE,
+        'description' => 'Username',
+      ),
+      'psw' => array(
+        'type' => 'blob',
+        'length' => 1024,
+        'serialize' => TRUE,
+        'description' => 'Password',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Deleting os2forms_server_communication_submissions_clearing_queue and
+ * os2forms_server_communication_submission_update tables.
+ */
+function os2forms_server_communication_update_7102(&$sandbox) {
+  db_drop_table('os2forms_server_communication_submissions_clearing_queue');
+  db_drop_table('os2forms_server_communication_submission_update');
+}
+

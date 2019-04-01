@@ -1,0 +1,109 @@
+<?php
+
+/**
+ * OS2Forms Server Communication
+ * PHP version 5
+ * @category OS2Forms
+ * @package  OS2Forms
+ * @file     Code for OS2Forms Server Communication
+ * @author   Juulia Devadze <juulia@bellcom.ee>, Stanislav Kutasevits <stan@bellcom.dk>
+ * @license  http://www.gnu.org/licenses/gpl-2.0.html GNU General Public License, version 2
+ * @link     http://bellcom.dk
+ */
+
+module_load_include('inc', 'os2forms_server_communication', 'includes/os2forms_server_communication');
+module_load_include('php', 'os2forms_server_communication', 'includes/RemoteServer.class');
+module_load_include('php', 'os2forms_server_communication', 'includes/RemoteServerLogger.class');
+
+/**
+ * Implementation of hook_menu()
+ * @return list of links
+ */
+function os2forms_server_communication_menu() {
+  $items = array();
+  $items['admin/config/os2forms_server_communication'] = array(
+    'title' => 'OS2Forms server communication setup',
+    'description' => 'Set up OS2Form Frontend servires',
+    'position' => 'right',
+    'weight' => -15,
+    'access arguments' => array('administer users'),
+    'page callback' => 'system_admin_menu_block_page',
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/config/os2forms_server_communication/settings'] = array(
+    'title' => 'OS2Forms server communication configuration',
+    'description' => 'Set up OS2FROM frontend servers',
+    'access arguments' => array('access administration pages'),
+    'page callback' => 'os2forms_server_communication_settings_page',
+    'file' => 'os2forms_server_communication.admin.inc'
+  );
+  $items['admin/config/os2forms_server_communication/server/add'] = array(
+    'title' => 'New Server',
+    'description' => 'Add new server',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('os2forms_server_communication_add_server_form'),
+    'type' => MENU_CALLBACK,
+    'access arguments' => array('access administration pages'),
+    'file' => 'os2forms_server_communication.admin.inc'
+  );
+
+  $items['admin/config/os2forms_server_communication/server/%/edit'] = array(
+    'title' => 'Edit Server',
+    'page callback' => 'os2forms_server_communication_edit_server_page',
+    'type' => MENU_CALLBACK,
+    'page arguments' => array(5),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('os2forms_server_communication_edit_server_form'),
+    'access arguments' => array('access administration pages'),
+    'file' => 'os2forms_server_communication.admin.inc'
+  );
+  $items['admin/config/os2forms_server_communication/server/%/delete'] = array(
+    'title' => 'Delete server',
+    'type' => MENU_CALLBACK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('os2forms_server_communication_delete_server_form'),
+    'access arguments' => array('access administration pages'),
+    'file' => 'os2forms_server_communication.admin.inc',
+  );
+
+  $items['os2forms_server_communication/testcron'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => 'os2forms_server_communication_sync_submissions',
+    'access arguments' => array('access administration pages'),
+  );
+
+  return $items;
+}
+
+function os2forms_server_communication_cronapi($op, $job = NULL) {
+  switch ($op) {
+    case 'list':
+      return array('os2forms_server_communication_cron' => t("Copied submission from frontend servers"));
+  }
+}
+
+/**
+ * Implementation of hook_cron().
+ * Fires all imports.
+ * @return none
+ */
+function os2forms_server_communication_cron() {
+  os2forms_server_communication_sync_submissions();
+}
+
+/**
+ * Implements hook_monolog_channel_info().
+ */
+function os2forms_server_communication_monolog_channel_info() {
+  $channels = array();
+
+  $channels['os2forms_server_communication_channel'] = array(
+    'label' => t('OS2Forms server communication channel'),
+    'description' => t('A channel to log OS2Forms server communication messages.'),
+    'default profile' => 'os2forms_server_communication_pr',
+  );
+
+  return $channels;
+}

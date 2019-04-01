@@ -1,15 +1,10 @@
 <?php
 
-
-function os2forms_backend_enable() {
-  $feature = features_get_features('os2forms_backend');
-  $components = array_keys($feature->info['features']);
-  features_revert(array('os2forms_backend' => $components));
-  if (!module_exists('os2forms_server_communication')) {
-    module_enable(array('os2forms_server_communication'), TRUE);
-  }
-}
-
+/**
+ * Implement hook_uninstall.
+ *
+ * Disables and uninstalls os2forms_server_communication module.
+ */
 function os2forms_backend_uninstall() {
   if (module_exists('os2forms_server_communication')) {
     module_disable(array('os2forms_server_communication'));
@@ -17,12 +12,5 @@ function os2forms_backend_uninstall() {
   }
   else {
     drupal_uninstall_modules(array('os2forms_server_communication'));
-  }
-
-}
-
-function os2forms_backend_install() {
-  if (!module_exists('os2forms_server_communication')) {
-    module_enable(array('os2forms_server_communication'), TRUE);
   }
 }

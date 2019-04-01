@@ -1,5 +1,8 @@
 <?php
+
 /**
  * @file
- * Drupal needs this blank file.
+ * Code for the Os2forms backend server feature.
  */
+
+include_once 'os2forms_backend.features.inc';
