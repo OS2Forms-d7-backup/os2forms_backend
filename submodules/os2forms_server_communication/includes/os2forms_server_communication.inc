@@ -119,10 +119,7 @@ function os2forms_server_communication_sync_submissions() {
               }
 
               $localFile = file_save_data(base64_decode($remoteFile->file), $remoteFile->uri);
-              if ($localFile && isset($remoteFile->fid)) {
-                file_usage_add($localFile, 'webform', 'submission', $submission->sid);
-              }
-              else {
+              if (!$localFile || !isset($remoteFile->fid)) {
                 // Could not store file locally.
                 RemoteServerLogger::error('Could not store remote file (fid: %d) locally for submission uuid: %s, webform %s, uuid: %s. Skipping submission', $remoteFid, $submission->uuid, $remoteWebform->title, $submission->webform_uuid);
                 $fileImportError = TRUE;
@@ -133,6 +130,7 @@ function os2forms_server_communication_sync_submissions() {
                 'delta' => $delta,
                 'remote_fid' => $remoteFid,
                 'local_fid' => $localFile->fid,
+                'local_file' => $localFile,
               );
             }
           }
@@ -142,8 +140,15 @@ function os2forms_server_communication_sync_submissions() {
         }
 
         // Store submission data locally.
-        if (os2forms_server_communication_create_submission($webform, $submissionLoaded, $remoteFileComponents)) {
+        if ($localSid = os2forms_server_communication_create_submission($webform, $submissionLoaded, $remoteFileComponents)) {
           $submissionsToSynched++;
+
+          // Updating file usage table.
+          foreach($remoteFileComponents as $fileComponent) {
+            foreach ($fileComponent as $file) {
+              file_usage_add($file['local_file'], 'webform', 'submission', $localSid);
+            }
+          }
 
           // Mark submissions as synched.
           if (!$remoteServer->getMarkSubmissionSynched($submissionLoaded->uuid)) {
