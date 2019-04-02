@@ -119,7 +119,7 @@ function os2forms_server_communication_sync_submissions() {
               }
 
               $localFile = file_save_data(base64_decode($remoteFile->file), $remoteFile->uri);
-              if ($localFile && isset($remoteFile->fid) {
+              if ($localFile && isset($remoteFile->fid)) {
                 file_usage_add($localFile, 'webform', 'submission', $submission->sid);
               }
               else {
