@@ -1,5 +1,17 @@
 <?php
 
+/**
+ * Implements hook_enable().
+ *
+ * Setting node_export related variables.
+ */
+function os2forms_server_communication_enable() {
+  variable_set('node_export_reset_created_webform', 0);
+  variable_set('node_export_reset_changed_webform', 0);
+  variable_set('node_export_reset_revision_timestamp_webform', 0);
+  variable_set('node_export_existing', 'revision');
+}
+
 /*
  * Implements hook_schema().
  *
@@ -55,4 +67,14 @@ function os2forms_server_communication_update_7102(&$sandbox) {
   db_drop_table('os2forms_server_communication_submissions_clearing_queue');
   db_drop_table('os2forms_server_communication_submission_update');
 }
+
+/**
+ * Implements hook_update_N().
+ *
+ * Setting node_export related variables.
+ */
+function os2forms_server_communication_update_7103(&$sandbox) {
+  os2forms_server_communication_enable();
+}
+
 
