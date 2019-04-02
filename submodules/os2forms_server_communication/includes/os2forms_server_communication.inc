@@ -95,7 +95,7 @@ function os2forms_server_communication_sync_submissions() {
         $submissionLoaded = $remoteServer->getSubmission($submission->webform_nid, $submission->sid);
         if (!$submissionLoaded || empty($submissionLoaded)) {
           // Could not load submission.
-          RemoteServerLogger::error('Could not import submission uuid: %s, webform %s, uuid: %s. Skipping submission', $submission->uuid, $remoteWebform->title, $submission->webform_uuid);
+          RemoteServerLogger::error('Could not export submission uuid: %s, webform %s, uuid: %s. Skipping submission', $submission->uuid, $remoteWebform->title, $submission->webform_uuid);
           continue;
         }
 
@@ -119,7 +119,10 @@ function os2forms_server_communication_sync_submissions() {
               }
 
               $localFile = file_save_data(base64_decode($remoteFile->file), $remoteFile->uri);
-              if (!$localFile || !isset($remoteFile->fid)) {
+              if ($localFile && isset($remoteFile->fid) {
+                file_usage_add($localFile, 'webform', 'submission', $submission->sid);
+              }
+              else {
                 // Could not store file locally.
                 RemoteServerLogger::error('Could not store remote file (fid: %d) locally for submission uuid: %s, webform %s, uuid: %s. Skipping submission', $remoteFid, $submission->uuid, $remoteWebform->title, $submission->webform_uuid);
                 $fileImportError = TRUE;
@@ -133,6 +136,9 @@ function os2forms_server_communication_sync_submissions() {
               );
             }
           }
+        }
+        if ($fileImportError) {
+          continue;
         }
 
         // Store submission data locally.
@@ -190,12 +196,12 @@ function os2forms_server_communication_create_submission($webform, $submission, 
     webform_submission_delete($webform, $old_subission);
   }
 
-  $submission_data = (array) $submission->data;
+  $submission_data = $submission->data;
 
   foreach ($remoteFileComponents as $cid => $fileComponent) {
     foreach($fileComponent as $file) {
-      if ($submission_data[$cid][$file['delta']] == $file['remote_fid']) {
-        $submission_data[$cid][$file['delta']] = $file['local_fid'];
+      if ($submission_data->{$cid}[$file['delta']] == $file['remote_fid']) {
+        $submission_data->{$cid}[$file['delta']] = $file['local_fid'];
       }
     }
   }
@@ -207,7 +213,7 @@ function os2forms_server_communication_create_submission($webform, $submission, 
     'submitted' => $submission->submitted,
     'remote_addr' => $submission->remote_addr,
     'is_draft' => FALSE,
-    'data' => $submission_data,
+    'data' => (array) $submission_data,
   );
   return webform_submission_insert($webform, $submission);
 }
