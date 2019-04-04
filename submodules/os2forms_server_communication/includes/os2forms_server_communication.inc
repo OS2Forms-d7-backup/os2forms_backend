@@ -118,6 +118,13 @@ function os2forms_server_communication_sync_submissions() {
                 break;
               }
 
+              if (!file_prepare_directory(dirname($remoteFile->uri), FILE_CREATE_DIRECTORY)) {
+                // Could not create directory for saving remote file.
+                RemoteServerLogger::error('File directory %s is not writable or cannot be created for remote file (fid: %d) for submission uuid: %s, webform %s, uuid: %s. Skipping submission', dirname($remoteFile->uri), $remoteFid, $submission->uuid, $remoteWebform->title, $submission->webform_uuid);
+                $fileImportError = TRUE;
+                break;
+              }
+
               $localFile = file_save_data(base64_decode($remoteFile->file), $remoteFile->uri);
               if (!$localFile || !isset($remoteFile->fid)) {
                 // Could not store file locally.
