@@ -23,8 +23,8 @@ function os2forms_server_communication_settings_page() {
 
     $rows[] = array_merge((array) $row, (array) $edit, (array) $delete);
   }
-
-  $output = "<h3>" . t('Frontend servers') . "</h3>";
+  $output = drupal_render(drupal_get_form('os2forms_server_communication_settings_form'));
+  $output .= "<h3>" . t('Frontend servers') . "</h3>";
   $output .= '<ul class="action-links"> <li>'
     . l(t('Add'), '/admin/config/os2forms_server_communication/server/add', array('attributes' => array('name' => 'add_server')))
     . '</li>'
@@ -32,6 +32,15 @@ function os2forms_server_communication_settings_page() {
     . '</li></ul>';
   $output .= theme('table', array('header' => $headers, 'rows' => $rows));
   return $output;// . render(drupal_get_form('os2forms_server_communication_submissions_download_settings_form'));
+}
+
+function os2forms_server_communication_settings_form($form, $form_state) {
+  $form['os2forms_server_communication_use_insecure_connection'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use insecure connecton'),
+    '#default_value' => variable_get('os2forms_server_communication_use_insecure_connection', FALSE),
+  );
+  return system_settings_form($form);
 }
 
 /**

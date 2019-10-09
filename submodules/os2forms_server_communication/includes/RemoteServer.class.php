@@ -129,6 +129,10 @@ class RemoteServer {
     $options['headers'] = array();
     $options['headers']['Authorization'] = $this->authToken;
     $options['headers']['Content-Type'] = 'application/json';
+    if (variable_get('os2forms_server_communication_use_insecure_connection', FALSE)) {
+      $options['context'] = stream_context_create(array(
+        'ssl' => array('verify_peer' => FALSE, 'verify_peer_name' => FALSE)));
+    }
     $result = drupal_http_request($requestUrl, $options);
 
     if ($result->code == 200) {
